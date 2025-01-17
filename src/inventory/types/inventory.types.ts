@@ -10,7 +10,7 @@ export enum PartStatus {
 // Part Types
 export interface Part {
     partName: string;
-    partId?: string;
+    partId?: number;
     type: string;
     status: PartStatus;
     dateAdded?: string;
@@ -20,7 +20,7 @@ export interface Part {
     model?: string;
     // Location details
     locationName?: string;
-    locationId? : string;
+    locationId?: number;
     container?: string;
     row?: number;
     position?: string;
@@ -33,7 +33,7 @@ export interface Part {
 // Location Types
 export interface Location {
     locationName: string;
-    locationId?: string;
+    locationId?: number;
     container?: string;
     row?: number;
     position?: string;

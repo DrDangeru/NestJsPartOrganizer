@@ -7,9 +7,9 @@ export class CreatePartDto implements Omit<Part, 'dateAdded'> {
     type!: Part['type']
     partName: string;
 
-    @IsString()
+    @IsNumber()
     @IsOptional()
-    partId?: string;
+    partId?: number;
 
     @IsEnum(PartStatus)
     status: PartStatus = PartStatus.AVAILABLE;
@@ -34,9 +34,9 @@ export class CreatePartDto implements Omit<Part, 'dateAdded'> {
     @IsOptional()
     locationName?: string;
 
-    @IsString()
+    @IsNumber()
     @IsOptional()
-    locationId?: string;
+    locationId?: number;
 
     @IsString()
     @IsOptional()

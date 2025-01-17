@@ -8,16 +8,35 @@ import { Location } from 'src/inventory/types/inventory.types';
 @Injectable()
 export class DatabaseService implements OnModuleInit {
     private db: Database.Database;
+    private lastLocationId = 0;
+    private lastPartId = 100;  // Start at 100 so first part will be 101
 
     constructor() {
         this.db = new Database(join(__dirname, '../../data/parts.db'));
     }
 
-    private generateId(prefix: string): string {
-        return `${prefix}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    prepare(sql: string) {
+        return this.db.prepare(sql);
     }
 
-    onModuleInit() {
+    private generateId(prefix: string): number {
+        if (prefix === 'LOC') {
+            this.lastLocationId++;
+            if (this.lastLocationId > 100) {
+                throw new Error('Maximum location ID (100) reached');
+            }
+            return this.lastLocationId;
+        } else if (prefix === 'PART') {
+            this.lastPartId++;
+            if (this.lastPartId > 100000) {
+                throw new Error('Maximum part ID (100000) reached');
+            }
+            return this.lastPartId;
+        }
+        throw new Error('Invalid prefix');
+    }
+
+    async onModuleInit() {
         interface TableColumnInfo {
             cid: number;
             name: string;
@@ -28,10 +47,10 @@ export class DatabaseService implements OnModuleInit {
         }
 
         try {
-            // Create tables only if they don't exist
+            // Create tables first
             this.db.exec(`
                 CREATE TABLE IF NOT EXISTS locations (
-                    locationId TEXT PRIMARY KEY,
+                    locationId INTEGER PRIMARY KEY,
                     locationName TEXT NOT NULL,
                     container TEXT,
                     row INTEGER,
@@ -39,23 +58,35 @@ export class DatabaseService implements OnModuleInit {
                 );
 
                 CREATE TABLE IF NOT EXISTS parts (
-                    partId TEXT PRIMARY KEY,
+                    partId INTEGER PRIMARY KEY,
                     partName TEXT NOT NULL,
                     type TEXT NOT NULL,
                     status TEXT NOT NULL,
-                    dateAdded TEXT NOT NULL,
+                    dateAdded TEXT,
                     currentLoan TEXT,
                     quantity INTEGER DEFAULT 1,
                     manufacturer TEXT,
                     model TEXT,
-                    locationId TEXT,
+                    locationId INTEGER,
                     container TEXT,
                     row INTEGER,
                     position TEXT,
+                    category TEXT,
                     FOREIGN KEY (locationId) REFERENCES locations(locationId)
                 );
             `);
+
+            // Then initialize last used IDs from database
+            const lastLocation = this.prepare('SELECT locationId FROM locations ORDER BY locationId DESC LIMIT 1').get();
+            const lastPart = this.prepare('SELECT partId FROM parts ORDER BY partId DESC LIMIT 1').get();
             
+            if (lastLocation) {
+                this.lastLocationId = lastLocation.locationId;
+            }
+            if (lastPart) {
+                this.lastPartId = lastPart.partId;
+            }
+
             console.log('Database initialized successfully');
         } catch (error) {
             console.error('Error initializing database:', error);
@@ -66,7 +97,7 @@ export class DatabaseService implements OnModuleInit {
     // Parts operations
     getAllParts() {
         try {
-            const parts = this.db.prepare(`
+            const parts = this.prepare(`
                 SELECT * 
                 FROM parts 
                 ORDER BY partName`).all();
@@ -79,21 +110,22 @@ export class DatabaseService implements OnModuleInit {
 
     createLocation(location: Location) {
         try {
-            const stmt = this.db.prepare(`
-                INSERT INTO locations (locationId, locationName, container, row, position)
-                VALUES (?, ?, ?, ?, ?)
+            const locationId = this.generateId('LOC');
+            const stmt = this.prepare(`
+                INSERT INTO locations (
+                    locationId, locationName, container, row, position
+                ) VALUES (?, ?, ?, ?, ?)
             `);
-            const result = stmt.run(
-                location.locationId || this.generateId('loc'),
+
+            stmt.run(
+                locationId,
                 location.locationName,
                 location.container || null,
                 location.row || null,
                 location.position || null
             );
-            if (result.changes !== 1) {
-                throw new Error('Failed to create location');
-            }
-            return location;
+
+            return { ...location, locationId };
         } catch (error) {
             console.error('Error creating location:', error);
             throw error;
@@ -102,7 +134,7 @@ export class DatabaseService implements OnModuleInit {
             
     getPart(partName: string) {
         try {
-            const part = this.db.prepare(`
+            const part = this.prepare(`
                 SELECT * 
                 FROM parts 
                 WHERE partName = ?`).get(partName);
@@ -118,34 +150,36 @@ export class DatabaseService implements OnModuleInit {
 
     createPart(part: Part) {
         try {
-            const stmt = this.db.prepare(`
-                INSERT INTO parts (partId, partName, type, status, dateAdded, quantity, locationId, container, row, position)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            const partId = this.generateId('PART');
+            const stmt = this.prepare(`
+                INSERT INTO parts (
+                    partId, partName, type, status, dateAdded,
+                    currentLoan, quantity, manufacturer, model,
+                    locationId, container, row, position
+                ) VALUES (
+                    ?, ?, ?, ?, ?,
+                    ?, ?, ?, ?,
+                    ?, ?, ?, ?
+                )
             `);
-            
-            // Validate required fields
-            if (!part.partName || !part.type) {
-                throw new Error('Missing required fields for part creation');
-            }
 
-            const result = stmt.run(
-                part.partId || this.generateId('part'),
+            stmt.run(
+                partId,
                 part.partName,
                 part.type,
-                part.status || 'available',
+                part.status,
                 part.dateAdded || new Date().toISOString(),
+                part.currentLoan || null,
                 part.quantity || 1,
+                part.manufacturer || null,
+                part.model || null,
                 part.locationId || null,
                 part.container || null,
                 part.row || null,
                 part.position || null
             );
 
-            if (result.changes !== 1) {
-                throw new Error('Failed to create part');
-            }
-
-            return { ...part, partId: result.lastInsertRowid };
+            return { ...part, partId };
         } catch (error) {
             console.error('Error creating part:', error);
             throw error;
@@ -157,13 +191,13 @@ export class DatabaseService implements OnModuleInit {
             .map(key => `${key} = ?`)
             .join(', ');
         const values = Object.values(data);
-        const stmt = this.db.prepare(`UPDATE parts SET ${sets} WHERE partName = ?`);
+        const stmt = this.prepare(`UPDATE parts SET ${sets} WHERE partName = ?`);
         stmt.run(...values, partName);
         return this.getPart(partName);
     }
 
     findPartsByLocation(locationName: string) {
-        return this.db.prepare(`
+        return this.prepare(`
             SELECT p.* 
             FROM parts p
             JOIN locations l ON p.locationId = l.locationId
@@ -172,16 +206,16 @@ export class DatabaseService implements OnModuleInit {
     }
 
     findPartsByType(type: string) {
-        return this.db.prepare('SELECT * FROM parts WHERE type = ?').all(type);
+        return this.prepare('SELECT * FROM parts WHERE type = ?').all(type);
     }
 
     findPartsByStatus(status: string) {
-        return this.db.prepare('SELECT * FROM parts WHERE status = ?').all(status);
+        return this.prepare('SELECT * FROM parts WHERE status = ?').all(status);
     }
 
     deletePart(partName: string) {
         try {
-            const result = this.db.prepare('DELETE FROM parts WHERE partName = ?').run(partName);
+            const result = this.prepare('DELETE FROM parts WHERE partName = ?').run(partName);
             if (result.changes === 0) {
                 throw new Error(`Part with name ${partName} not found`);
             }
@@ -193,6 +227,6 @@ export class DatabaseService implements OnModuleInit {
     }
 
     showLocations() {
-        return this.db.prepare('SELECT * FROM locations').all();
+        return this.prepare('SELECT * FROM locations').all();
     }
 }

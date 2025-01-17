@@ -8,24 +8,31 @@ import { DatabaseService } from '../../database/database.service';
 
 @Injectable()
 export class InventoryService {
-    private partIdCounter = 1;
-    private locationIdCounter = 1;
-
     constructor(private readonly db: DatabaseService) {}
 
     // Part Management
     async createPart(type: string, data: Partial<Part>): Promise<Part> {
+        if (!data.partName) {
+            throw new BadRequestException('partName is required');
+        }
+
+        // If locationId is provided, verify it exists
+        if (data.locationId) {
+            const locationExists = this.db.prepare('SELECT locationId FROM locations WHERE locationId = ?').get(data.locationId);
+            if (!locationExists) {
+                throw new BadRequestException(`Location with ID ${data.locationId} does not exist`);
+            }
+        }
+
         const newPart: Part = {
-            partId: this.partIdCounter.toString(),
-            partName: data.partName || type,
-            type,
-            status: 'available' as PartStatus,
-            quantity: data.quantity ?? 1,  // ensure quantity is always set
-            category: data.category,
             ...data,
+            type,
+            partName: data.partName,
+            status: data.status || 'available' as PartStatus,
+            quantity: data.quantity ?? 1,  // ensure quantity is always set
+            dateAdded: new Date().toISOString(),  // Add current date
         };
 
-        this.partIdCounter++;
         return this.db.createPart(newPart) as any;
     }
 
@@ -34,11 +41,7 @@ export class InventoryService {
             throw new BadRequestException('Location name required');
         }
 
-        const id = this.locationIdCounter.toString();
-        this.locationIdCounter++;
-
         return this.db.createLocation({
-            locationId: id,
             locationName: data.locationName,
             container: data.container,
             row: data.row,

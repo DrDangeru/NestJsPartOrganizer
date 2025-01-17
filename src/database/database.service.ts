@@ -28,13 +28,17 @@ export class DatabaseService implements OnModuleInit {
         }
 
         try {
-            // Drop existing locations table
-            // this.db.exec('DROP TABLE IF EXISTS locations;');
-            //  should not be needed if the table exists
-            // Create tables if they don't exist
+            // Create tables only if they don't exist
             this.db.exec(`
-                DROP TABLE IF EXISTS parts;
-                CREATE TABLE parts (
+                CREATE TABLE IF NOT EXISTS locations (
+                    locationId TEXT PRIMARY KEY,
+                    locationName TEXT NOT NULL,
+                    container TEXT,
+                    row INTEGER,
+                    position TEXT
+                );
+
+                CREATE TABLE IF NOT EXISTS parts (
                     partId TEXT PRIMARY KEY,
                     partName TEXT NOT NULL,
                     type TEXT NOT NULL,
@@ -49,15 +53,6 @@ export class DatabaseService implements OnModuleInit {
                     row INTEGER,
                     position TEXT,
                     FOREIGN KEY (locationId) REFERENCES locations(locationId)
-                );
-
-                DROP TABLE IF EXISTS locations;
-                CREATE TABLE locations (
-                    locationId TEXT PRIMARY KEY,
-                    locationName TEXT NOT NULL,
-                    container TEXT,
-                    row INTEGER,
-                    position TEXT
                 );
             `);
             

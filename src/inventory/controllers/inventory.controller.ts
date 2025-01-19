@@ -54,6 +54,11 @@ export class InventoryController {
         return this.inventoryService.getAllLocations();
     }
 
+    @Delete('locations/:name')
+    async deleteLocation(@Param('name') name: string) {
+        return this.inventoryService.deleteLocation(name);
+    }
+
     @Get('search')
     async searchParts(
         @Query('location') location?: string,

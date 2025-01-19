@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, InternalServerErrorException } from '@nestjs/common';
 import {
     Part,
     Location,
@@ -104,4 +104,29 @@ export class InventoryService {
         return location;
     }
 
+    async deleteLocation(name: string) {
+        // First check if location exists
+        const location = await this.getLocationByName(name);
+        if (!location) {
+            throw new NotFoundException(`Location with name ${name} not found`);
+        }
+
+        // Check if there are any parts in this location
+        const parts = await this.db.findPartsByLocation(name);
+        if (parts && parts.length > 0) {
+            throw new BadRequestException(
+                `Cannot delete location "${name}" because it contains ${parts.length} parts. Please move or delete these parts first.`
+            );
+        }
+
+        try {
+            const result = this.db.prepare('DELETE FROM locations WHERE locationName = ?').run(name);
+            if (result.changes === 0) {
+                throw new NotFoundException(`Location with name ${name} not found`);
+            }
+            return { message: `Location ${name} deleted successfully` };
+        } catch (error) {
+            throw new InternalServerErrorException(`Failed to delete location: ${error.message}`);
+        }
+    }
 }

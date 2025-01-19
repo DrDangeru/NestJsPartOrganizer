@@ -47,7 +47,10 @@ export class InventoryController {
     }
 
     @Get('locations')
-    async getAllLocations(): Promise<Location[]> {
+    async getLocations(@Query('name') name?: string): Promise<Location | Location[]> {
+        if (name) {
+            return this.inventoryService.getLocationByName(name);
+        }
         return this.inventoryService.getAllLocations();
     }
 

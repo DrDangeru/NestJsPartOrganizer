@@ -16,14 +16,6 @@ export class InventoryService {
             throw new BadRequestException('partName is required');
         }
 
-        // If locationId is provided, verify it exists
-        if (data.locationId) {
-            const locationExists = this.db.prepare('SELECT locationId FROM locations WHERE locationId = ?').get(data.locationId);
-            if (!locationExists) {
-                throw new BadRequestException(`Location with ID ${data.locationId} does not exist`);
-            }
-        }
-
         const newPart: Part = {
             ...data,
             type,
@@ -100,11 +92,16 @@ export class InventoryService {
         return this.db.showLocations() as Location[];
     }
 
-    // async getLocation(id: string): Promise<Location> {
-    //     const location = await this.db.getLocation(id);
-    //     if (!location) {
-    //         throw new NotFoundException(`Location with ID ${id} not found`);
-    //     }
-    //     return location;
-    // }
+    async getLocationByName(name: string): Promise<Location> {
+        const location = this.db.prepare(
+            'SELECT * FROM locations WHERE locationName = ?'
+        ).get(name) as Location | undefined;
+
+        if (!location) {
+            throw new NotFoundException(`Location with name ${name} not found`);
+        }
+
+        return location;
+    }
+
 }

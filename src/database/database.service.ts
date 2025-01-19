@@ -3,7 +3,8 @@ import * as Database from 'better-sqlite3';
 import { Injectable, OnModuleInit } from '@nestjs/common';
 import { join } from 'path';
 import { Part } from 'src/inventory/types/inventory.types';
-import { Location } from 'src/inventory/types/inventory.types'; 
+import { Location } from 'src/inventory/types/inventory.types';
+import { Statement } from 'better-sqlite3';
 
 @Injectable()
 export class DatabaseService implements OnModuleInit {
@@ -15,37 +16,27 @@ export class DatabaseService implements OnModuleInit {
         this.db = new Database(join(__dirname, '../../data/parts.db'));
     }
 
-    prepare(sql: string) {
+    prepare(sql: string): Statement {
         return this.db.prepare(sql);
     }
 
-    private generateId(prefix: string): number {
-        if (prefix === 'LOC') {
+    private generateId(type: 'location' | 'part'): number {
+        if (type === 'location') {
             this.lastLocationId++;
             if (this.lastLocationId > 100) {
                 throw new Error('Maximum location ID (100) reached');
             }
             return this.lastLocationId;
-        } else if (prefix === 'PART') {
+        } else {
             this.lastPartId++;
-            if (this.lastPartId > 100000) {
-                throw new Error('Maximum part ID (100000) reached');
+            if (this.lastPartId > 1000000) {
+                throw new Error('Maximum part ID (1000000) reached');
             }
             return this.lastPartId;
         }
-        throw new Error('Invalid prefix');
     }
 
     async onModuleInit() {
-        interface TableColumnInfo {
-            cid: number;
-            name: string;
-            type: string;
-            notnull: number;
-            dflt_value: any;
-            pk: number;
-        }
-
         try {
             // Create tables first
             this.db.exec(`
@@ -60,6 +51,7 @@ export class DatabaseService implements OnModuleInit {
                 CREATE TABLE IF NOT EXISTS parts (
                     partId INTEGER PRIMARY KEY,
                     partName TEXT NOT NULL,
+                    partDescription TEXT,
                     type TEXT NOT NULL,
                     status TEXT NOT NULL,
                     dateAdded TEXT,
@@ -76,9 +68,9 @@ export class DatabaseService implements OnModuleInit {
                 );
             `);
 
-            // Then initialize last used IDs from database
-            const lastLocation = this.prepare('SELECT locationId FROM locations ORDER BY locationId DESC LIMIT 1').get();
-            const lastPart = this.prepare('SELECT partId FROM parts ORDER BY partId DESC LIMIT 1').get();
+            // Initialize last used IDs from database
+            const lastLocation = this.prepare('SELECT locationId FROM locations ORDER BY locationId DESC LIMIT 1').get() as { locationId: number } | undefined;
+            const lastPart = this.prepare('SELECT partId FROM parts ORDER BY partId DESC LIMIT 1').get() as { partId: number } | undefined;
             
             if (lastLocation) {
                 this.lastLocationId = lastLocation.locationId;
@@ -98,7 +90,9 @@ export class DatabaseService implements OnModuleInit {
     getAllParts() {
         try {
             const parts = this.prepare(`
-                SELECT * 
+                SELECT partId, partName, partDescription, type, status, dateAdded, 
+                       currentLoan, quantity, manufacturer, model,
+                       locationId, container, row, position, category
                 FROM parts 
                 ORDER BY partName`).all();
             return Array.isArray(parts) ? parts : [];
@@ -110,7 +104,7 @@ export class DatabaseService implements OnModuleInit {
 
     createLocation(location: Location) {
         try {
-            const locationId = this.generateId('LOC');
+            const locationId = this.generateId('location');
             const stmt = this.prepare(`
                 INSERT INTO locations (
                     locationId, locationName, container, row, position
@@ -135,7 +129,9 @@ export class DatabaseService implements OnModuleInit {
     getPart(partName: string) {
         try {
             const part = this.prepare(`
-                SELECT * 
+                SELECT partId, partName, partDescription, type, status, dateAdded,
+                       currentLoan, quantity, manufacturer, model,
+                       locationId, container, row, position, category
                 FROM parts 
                 WHERE partName = ?`).get(partName);
             if (!part) {
@@ -150,22 +146,49 @@ export class DatabaseService implements OnModuleInit {
 
     createPart(part: Part) {
         try {
-            const partId = this.generateId('PART');
+            const partId = part.partId || this.generateId('part');
+            let locationId: number | null = null;
+
+            // If locationName is provided, try to find existing location
+            if (part.locationName) {
+                const existingLocation = this.prepare(
+                    'SELECT locationId FROM locations WHERE locationName = ?'
+                ).get(part.locationName) as { locationId: number } | undefined;
+                
+                if (!existingLocation) {
+                    throw new Error(`Location "${part.locationName}" does not exist.
+                        Please create the location first.`);
+                }
+                locationId = existingLocation.locationId;
+            }
+
+            // Validate that the container exists for this location if provided
+            if (locationId && part.container) {
+                const existingContainer = this.prepare(
+                    'SELECT container FROM locations WHERE locationId = ? AND container = ?'
+                ).get(locationId, part.container) as { container: string } | undefined;
+
+                if (!existingContainer) {
+                    throw new Error(`Container "${part.container}" does not exist in the specified location. Please create the container first.`);
+                }
+            }
+
             const stmt = this.prepare(`
                 INSERT INTO parts (
-                    partId, partName, type, status, dateAdded,
+                    partId, partName, partDescription, type, status, dateAdded,
                     currentLoan, quantity, manufacturer, model,
-                    locationId, container, row, position
+                    locationId, container, row, position, category
                 ) VALUES (
-                    ?, ?, ?, ?, ?,
+                    ?, ?, ?, ?, ?, ?,
                     ?, ?, ?, ?,
-                    ?, ?, ?, ?
+                    ?, ?, ?, ?, ?
                 )
-            `);
+                RETURNING *`);
 
-            stmt.run(
+            const result = stmt.get(
                 partId,
                 part.partName,
+                part.partDescription || null,
                 part.type,
                 part.status,
                 part.dateAdded || new Date().toISOString(),
@@ -173,13 +196,14 @@ export class DatabaseService implements OnModuleInit {
                 part.quantity || 1,
                 part.manufacturer || null,
                 part.model || null,
-                part.locationId || null,
+                locationId,
                 part.container || null,
                 part.row || null,
-                part.position || null
-            );
+                part.position || null,
+                part.category || null
+            ) as Part;
 
-            return { ...part, partId };
+            return result;
         } catch (error) {
             console.error('Error creating part:', error);
             throw error;
@@ -198,7 +222,9 @@ export class DatabaseService implements OnModuleInit {
 
     findPartsByLocation(locationName: string) {
         return this.prepare(`
-            SELECT p.* 
+            SELECT p.partId, p.partName, p.partDescription, p.type, p.status, p.dateAdded,
+                   p.currentLoan, p.quantity, p.manufacturer, p.model,
+                   p.locationId, p.container, p.row, p.position, p.category
             FROM parts p
             JOIN locations l ON p.locationId = l.locationId
             WHERE l.locationName = ?
@@ -206,11 +232,23 @@ export class DatabaseService implements OnModuleInit {
     }
 
     findPartsByType(type: string) {
-        return this.prepare('SELECT * FROM parts WHERE type = ?').all(type);
+        return this.prepare(`
+            SELECT partId, partName, partDescription, type, status, dateAdded,
+                   currentLoan, quantity, manufacturer, model,
+                   locationId, container, row, position, category
+            FROM parts 
+            WHERE type = ?
+            ORDER BY partName`).all(type);
     }
 
     findPartsByStatus(status: string) {
-        return this.prepare('SELECT * FROM parts WHERE status = ?').all(status);
+        return this.prepare(`
+            SELECT partId, partName, partDescription, type, status, dateAdded,
+                   currentLoan, quantity, manufacturer, model,
+                   locationId, container, row, position, category
+            FROM parts 
+            WHERE status = ?
+            ORDER BY partName`).all(status);
     }
 
     deletePart(partName: string) {

@@ -1,4 +1,4 @@
-import { IsString, IsOptional, IsEnum, IsNumber, IsNotEmpty } from 'class-validator';
+import { IsString, IsOptional, IsEnum, IsNumber, IsNotEmpty, Min } from 'class-validator';
 import { Part, PartStatus, PartCategory } from '../types/inventory.types';
 
 export class CreatePartDto implements Omit<Part, 'dateAdded'> {
@@ -6,6 +6,11 @@ export class CreatePartDto implements Omit<Part, 'dateAdded'> {
     @IsNotEmpty()
     type!: Part['type']
     partName: string;
+
+    @IsString()
+    @IsOptional()
+    partDescription?: string;
+   
 
     @IsNumber()
     @IsOptional()
@@ -20,7 +25,8 @@ export class CreatePartDto implements Omit<Part, 'dateAdded'> {
 
     @IsNumber()
     @IsNotEmpty()
-    quantity: number | 1;
+    @Min(1, { message: 'Quantity must be at least 1' })
+    quantity: number = 1;
 
     @IsString()
     @IsOptional()
@@ -33,10 +39,6 @@ export class CreatePartDto implements Omit<Part, 'dateAdded'> {
     @IsString()
     @IsOptional()
     locationName?: string;
-
-    @IsNumber()
-    @IsOptional()
-    locationId?: number;
 
     @IsString()
     @IsOptional()

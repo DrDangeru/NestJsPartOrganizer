@@ -28,8 +28,12 @@ partForm.addEventListener('submit', handleAddPart);
 filterType.addEventListener('change', handleFilterChange);
 confirmLoanBtn.addEventListener('click', handleLoanPart);
 
+// Add location change listener
+document.getElementById('locationName').addEventListener('change', handleLocationChange);
+
 // Initialize
 loadParts();
+loadLocations();
 
 // Functions
 async function loadParts(type = '') {
@@ -48,19 +52,29 @@ function renderParts() {
     partsList.innerHTML = currentParts.map(part => `
         <tr>
             <td>${part.partName}</td>
-            <td>${part.id}</td>
+            <td class="text-wrap" style="max-width: 200px;">
+                ${part.partDescription ? 
+                    `<span class="text-muted small">${part.partDescription}</span>` : 
+                    '<span class="text-muted small">No description</span>'
+                }
+            </td>
+            <td>${part.partId}</td>
             <td>${part.type}</td>
-            <td>${part.locationId}</td>
+            <td>${part.locationName || ''}</td>
+            <td>${part.container || ''}</td>
+            <td>${part.row || ''}</td>
+            <td>${part.position || ''}</td>
+            <td>${part.quantity}</td>
             <td><span class="badge bg-${getStatusBadgeColor(part.status)}">${part.status}</span></td>
             <td>
                 <div class="btn-group">
                     ${part.status === 'available' 
-                        ? `<button class="btn btn-sm btn-primary" onclick="openLoanModal('${part.id}')">Loan</button>`
+                        ? `<button class="btn btn-sm btn-primary" onclick="openLoanModal('${part.partId}')">Loan</button>`
                         : part.status === 'loaned'
-                        ? `<button class="btn btn-sm btn-success" onclick="returnPart('${part.id}')">Return</button>`
+                        ? `<button class="btn btn-sm btn-success" onclick="returnPart('${part.partId}')">Return</button>`
                         : ''
                     }
-                    <button class="btn btn-sm btn-danger" onclick="deletePart('${part.id}')">Delete</button>
+                    <button class="btn btn-sm btn-danger" onclick="deletePart('${part.partId}')">Delete</button>
                 </div>
             </td>
         </tr>
@@ -80,57 +94,39 @@ function getStatusBadgeColor(status) {
 async function handleAddPart(e) {
     e.preventDefault();
     const formData = {
+        partName: document.getElementById('partName').value,
+        partDescription: document.getElementById('partDescription').value.trim() || null,
         type: document.getElementById('partType').value,
-        locationId: document.getElementById('locationId').value || generateId('loc'),
         locationName: document.getElementById('locationName').value,
-        status: document.getElementById('status').value,
-        partName: document.getElementById('partName').value
+        container: document.getElementById('containerName').value,
+        row: document.getElementById('row').value ? parseInt(document.getElementById('row').value) : null,
+        position: document.getElementById('position').value || null,
+        quantity: parseInt(document.getElementById('quantity').value) || 1,
+        status: document.getElementById('status').value
     };
 
-    console.log(formData,'this is formdata');
     try {
-        // First, ensure the location exists or create it
-        const locationData = {
-            locationName: formData.locationName,
-            locationId: formData.locationId,
-            container: null,
-            row: null,
-            position: null
-        };
-
-        console.log('Creating location with data:', locationData);
-
-        const locationResponse = await fetch(API.locations, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(locationData) // using all the data ,  not just the partial
-        });
-
-        if (!locationResponse.ok) {
-            const errorData = await locationResponse.json();
-            console.error('Location creation error:', errorData);
-            throw new Error(errorData.message || 'Failed to create location');
-        }
-
-        // Then create the part
         const response = await fetch(API.parts, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                type: formData.type,
-                locationId: formData.locationId,
-                status: formData.status,
-                partName: formData.partName
-            })
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(formData)
         });
 
         if (!response.ok) {
             const error = await response.json();
-            throw new Error(error.message || 'Failed to add part');
+            throw new Error(error.message || 'Failed to create part');
         }
+
+        // Reset form
+        document.getElementById('partForm').reset();
         
-        await loadParts(filterType.value);
-        partForm.reset();
+        // Clear description field (since it's not a standard form input)
+        document.getElementById('partDescription').value = '';
+        
+        // Reload parts
+        await loadParts();
     } catch (error) {
         console.error('Error adding part:', error);
         alert(error.message || 'Failed to add part');
@@ -201,5 +197,36 @@ async function deletePart(partId) {
     } catch (error) {
         console.error('Error deleting part:', error);
         alert('Failed to delete part');
+    }
+}
+
+async function loadLocations() {
+    try {
+        const response = await fetch(API.locations);
+        const locations = await response.json();
+        const locationSelect = document.getElementById('locationName');
+        locationSelect.innerHTML = '<option value="">Select a location</option>' + 
+            locations.map(loc => `<option value="${loc.locationName}">${loc.locationName}</option>`).join('');
+    } catch (error) {
+        console.error('Error loading locations:', error);
+    }
+}
+
+async function handleLocationChange(e) {
+    const locationName = e.target.value;
+    const containerSelect = document.getElementById('containerName');
+    containerSelect.innerHTML = '<option value="">Select a container</option>';
+    
+    if (!locationName) return;
+
+    try {
+        const response = await fetch(`${API.locations}?name=${locationName}`);
+        const location = await response.json();
+        
+        if (location && location.container) {
+            containerSelect.innerHTML += `<option value="${location.container}">${location.container}</option>`;
+        }
+    } catch (error) {
+        console.error('Error loading containers:', error);
     }
 }

@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Part Organizer - Add Part</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <nav class="navbar navbar-dark bg-dark">
+        <div class="container">
+            <span class="navbar-brand mb-0 h1">Part Organizer</span>
+            <div class="d-flex gap-2">
+                <a href="index.html" class="btn btn-secondary">Home</a>
+                <a href="location-form.html" class="btn btn-secondary">Manage Locations</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <!-- Part Management Section -->
+        <div class="row mb-4">
+            <div class="col">
+                <h2>Add New Part</h2>
+                <div class="card">
+                    <div class="card-body">
+                        <form id="partForm">
+                            <div class="mb-3">
+                                <label class="form-label">Part name</label>
+                                <textarea class="form-control" id="partName" required></textarea>                      
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Part Type</label>
+                                <select class="form-select" id="partType" required>
+                                    <option value="electronic">Electronic</option>
+                                    <option value="mechanical">Mechanical</option>
+                                    <option value="tool">Tool</option>
+                                    <option value="component">Component</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Location Name</label>
+                                <select class="form-select" id="locationName" required>
+                                    <option value="">Select a location</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Container Name</label>
+                                <select class="form-select" id="containerName" required>
+                                    <option value="">Select a container</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Part Description</label>
+                                <textarea class="form-control" id="partDescription" rows="3" 
+                                    placeholder="Enter part description (optional)"></textarea>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Row</label>
+                                <input type="number" class="form-control" id="row">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Position</label>
+                                <input type="text" class="form-control" id="position">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Quantity</label>
+                                <input type="number" class="form-control" id="quantity" required min="1" value="1">
+                                <small class="form-text text-muted">Minimum quantity is 1</small>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Status</label>
+                                <select class="form-select" id="status" required>
+                                    <option value="available">Available</option>
+                                    <option value="loaned">Loaned</option>
+                                    <option value="maintenance">Maintenance</option>
+                                    <option value="disposed">Disposed</option>
+                                </select>
+                            </div>
+                            <button type="submit" class="btn btn-primary">Add Part</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Parts List Section -->
+        <div class="row">
+            <div class="col">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h2>Parts List</h2>
+                    <div class="filters">
+                        <select class="form-select" id="filterType">
+                            <option value="">All Types</option>
+                            <option value="electronic">Electronic</option>
+                            <option value="mechanical">Mechanical</option>
+                            <option value="tool">Tool</option>
+                            <option value="component">Component</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Description</th>
+                                <th>ID</th>
+                                <th>Type</th>
+                                <th>Location</th>
+                                <th>Container</th>
+                                <th>Row</th>
+                                <th>Position</th>
+                                <th>Quantity</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="partsList">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal for Loan Part -->
+    <div class="modal fade" id="loanModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Loan Part</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="loanForm">
+                        <div class="mb-3">
+                            <label class="form-label">Borrower Name</label>
+                            <input type="text" class="form-control" id="borrowerName" required>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="confirmLoan">Confirm Loan</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="main.js"></script>
+</body>
+</html>

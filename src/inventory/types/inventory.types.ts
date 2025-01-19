@@ -9,8 +9,9 @@ export enum PartStatus {
 
 // Part Types
 export interface Part {
-    partName: string;
     partId?: number;
+    partName: string;
+    partDescription?: string;
     type: string;
     status: PartStatus;
     dateAdded?: string;
@@ -20,14 +21,10 @@ export interface Part {
     model?: string;
     // Location details
     locationName?: string;
-    locationId?: number;
     container?: string;
     row?: number;
     position?: string;
-    category?: 'hand' | 'power' | 'measurement' | 'specialty' | 
-              'sensor' | 'buck converter' | 'transistor' | 'diode' | 
-              'capacitor' | 'resistor' | 'pcb' | 'inductor' | 'led' | 
-              'led module';
+    category?: PartCategory;
 }
 
 // Location Types
@@ -39,7 +36,7 @@ export interface Location {
     position?: string;
 }
 
-// Category types for validation
+// Category types for validation , needs to be used as enum
 export const PartCategories = [
     'hand', 'power', 'measurement', 'specialty',
     'sensor', 'buck converter', 'transistor', 'diode',

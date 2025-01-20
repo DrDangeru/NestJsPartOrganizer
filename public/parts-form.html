@@ -10,10 +10,10 @@
 <body>
     <nav class="navbar navbar-dark bg-dark">
         <div class="container">
-            <span class="navbar-brand mb-0 h1">Part Organizer</span>
+            <span class="navbar-brand mb-0 h1 text-primary">Part Organizer</span>
             <div class="d-flex gap-2">
-                <a href="index.html" class="btn btn-secondary">Home</a>
-                <a href="location-form.html" class="btn btn-secondary">Manage Locations</a>
+                <a href="index.html" class="btn btn-primary">Home</a>
+                <a href="location-form.html" class="btn btn-danger">Manage Locations</a>
             </div>
         </div>
     </nav>
@@ -22,16 +22,16 @@
         <!-- Part Management Section -->
         <div class="row mb-4">
             <div class="col">
-                <h2>Add New Part</h2>
+                <h2 class="text-primary">Add New Part</h2>
                 <div class="card">
                     <div class="card-body">
                         <form id="partForm">
                             <div class="mb-3">
-                                <label class="form-label">Part name</label>
+                                <label class="form-label text-warning">Part name</label>
                                 <textarea class="form-control" id="partName" required></textarea>                      
                             </div>
                             <div class="mb-3">
-                                <label class="form-label">Part Type</label>
+                                <label class="form-label text-warning">Part Type</label>
                                 <select class="form-select" id="partType" required>
                                     <option value="electronic">Electronic</option>
                                     <option value="mechanical">Mechanical</option>
@@ -40,37 +40,37 @@
                                 </select>
                             </div>
                             <div class="mb-3">
-                                <label class="form-label">Part Description</label>
+                                <label class="form-label text-warning">Part Description</label>
                                 <textarea class="form-control" id="partDescription" rows="3" 
                                     placeholder="Enter part description (optional)"></textarea>
                             </div>
                             <div class="mb-3">
-                                <label class="form-label">Location Name</label>
+                                <label class="form-label text-warning">Location Name</label>
                                 <select class="form-select" id="locationName" required>
                                     <option value="">Select a location</option>
                                 </select>
                             </div>
                             <div class="mb-3">
-                                <label class="form-label">Container Name</label>
+                                <label class="form-label text-warning">Container Name</label>
                                 <select class="form-select" id="containerName" required>
                                     <option value="">Select a container</option>
                                 </select>
                             </div>
                             <div class="mb-3">
-                                <label class="form-label">Row</label>
+                                <label class="form-label text-warning">Row</label>
                                 <input type="number" class="form-control" id="row">
                             </div>
                             <div class="mb-3">
-                                <label class="form-label">Position</label>
+                                <label class="form-label text-warning">Position</label>
                                 <input type="text" class="form-control" id="position">
                             </div>
                             <div class="mb-3">
-                                <label class="form-label">Quantity</label>
+                                <label class="form-label text-warning">Quantity</label>
                                 <input type="number" class="form-control" id="quantity" required min="1" value="1">
                                 <small class="form-text text-muted">Minimum quantity is 1</small>
                             </div>
                             <div class="mb-3">
-                                <label class="form-label">Status</label>
+                                <label class="form-label text-warning">Status</label>
                                 <select class="form-select" id="status" required>
                                     <option value="available">Available</option>
                                     <option value="loaned">Loaned</option>
@@ -89,7 +89,7 @@
         <div class="row">
             <div class="col">
                 <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h2>Parts List</h2>
+                    <h2 class="text-primary">Parts List</h2>
                     <div class="filters">
                         <select class="form-select" id="filterType">
                             <option value="">All Types</option>
@@ -101,7 +101,7 @@
                     </div>
                 </div>
                 <div class="table-responsive">
-                    <table class="table table-striped">
+                    <table class="table table-striped table-hover">
                         <thead>
                             <tr>
                                 <th>Name</th>
@@ -114,7 +114,7 @@
                                 <th>Position</th>
                                 <th>Quantity</th>
                                 <th>Status</th>
-                                <th>Actions</th>
+                                <th class="text-end">Actions</th>
                             </tr>
                         </thead>
                         <tbody id="partsList">
@@ -136,7 +136,7 @@
                 <div class="modal-body">
                     <form id="loanForm">
                         <div class="mb-3">
-                            <label class="form-label">Borrower Name</label>
+                            <label class="form-label text-warning">Borrower Name</label>
                             <input type="text" class="form-control" id="borrowerName" required>
                         </div>
                     </form>
@@ -149,7 +149,6 @@
         </div>
     </div>
 
-    <script src="/assets/bootstrap/bootstrap.bundle.min.js"></script>
-    <script src="main.js"></script>
+    <script type="module" src="/main.js"></script>
 </body>
 </html>

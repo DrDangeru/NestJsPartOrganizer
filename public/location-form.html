@@ -10,9 +10,10 @@
 <body>
     <nav class="navbar navbar-dark bg-dark">
         <div class="container">
-            <span class="navbar-brand mb-0 h1">Part Organizer</span>
+            <span class="navbar-brand mb-0 h1 text-primary">Part Organizer</span>
             <div class="d-flex gap-2">
-                <a href="index.html" class="btn btn-secondary">Back to Parts</a>
+                <a href="index.html" class="btn btn-primary">Home</a>
+                <a href="parts-form.html" class="btn btn-danger">Back to Manage Parts</a>
             </div>
         </div>
     </nav>
@@ -21,16 +22,16 @@
         <!-- Add Location Form -->
         <div class="card mb-4">
             <div class="card-header">
-                <h5 class="card-title mb-0">Add New Location</h5>
+                <h5 class="card-title mb-0 text-primary">Add New Location</h5>
             </div>
             <div class="card-body">
                 <form id="locationForm">
                     <div class="mb-3">
-                        <label for="locationName" class="form-label">Location Name *</label>
+                        <label for="locationName" class="form-label text-warning">Location Name *</label>
                         <input type="text" class="form-control" id="locationName" name="locationName" required>
                     </div>
                     <div class="mb-3">
-                        <label for="container" class="form-label">Container</label>
+                        <label for="container" class="form-label text-warning">Container</label>
                         <input type="text" class="form-control" id="container" name="container">
                     </div>
                     <button type="submit" class="btn btn-primary">Add Location</button>
@@ -41,27 +42,30 @@
         <!-- Locations List -->
         <div class="card">
             <div class="card-header">
-                <h5 class="card-title mb-0">Existing Locations</h5>
+                <h5 class="card-title mb-0 text-primary">Existing Locations</h5>
             </div>
             <div class="card-body">
-                <table class="table">
-                    <thead>
-                        <tr>
-                            <th>Location Name</th>
-                            <th>Container</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody id="locationsList">
-                        <!-- Locations will be dynamically added here -->
-                    </tbody>
-                </table>
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover">
+                        <thead>
+                            <tr>
+                                <th>Location Name</th>
+                                <th>Container</th>
+                                <th class="text-end">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="locationsList">
+                            <!-- Locations will be dynamically added here -->
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </div>
 
-    <script src="/assets/bootstrap/bootstrap.bundle.min.js"></script>
-    <script>
+    <script type="module">
+        import '/assets/bootstrap/bootstrap.bundle.min.js';
+
         // API endpoints
         const API = {
             locations: '/api/inventory/locations',
@@ -82,22 +86,72 @@
             try {
                 const response = await fetch(API.locations);
                 const locations = await response.json();
-                locationsList.innerHTML = locations.map(location => `
-                    <tr>
-                        <td>${location.locationName}</td>
-                        <td>${location.container || '-'}</td>
-                        <td>
-                            <button class="btn btn-sm btn-danger" 
-                                onclick="deleteLocation('${location.locationName}')"
-                                ${location.hasOwnProperty('partsCount') && location.partsCount > 0 ? 'disabled' : ''}>
-                                Delete
-                            </button>
-                        </td>
-                    </tr>
-                `).join('') || '<tr><td colspan="3" class="text-center">No locations found</td></tr>';
+                
+                // Clear existing locations
+                while (locationsList.firstChild) {
+                    locationsList.removeChild(locationsList.firstChild);
+                }
+                
+                if (locations.length === 0) {
+                    const tr = document.createElement('tr');
+                    const td = document.createElement('td');
+                    td.setAttribute('colspan', '3');
+                    td.className = 'text-center';
+                    td.textContent = 'No locations found';
+                    tr.appendChild(td);
+                    locationsList.appendChild(tr);
+                    return;
+                }
+
+                locations.forEach(location => {
+                    const tr = document.createElement('tr');
+                    
+                    // Location name cell
+                    const nameCell = document.createElement('td');
+                    nameCell.className = 'align-middle';
+                    nameCell.textContent = location.locationName;
+                    tr.appendChild(nameCell);
+                    
+                    // Container cell
+                    const containerCell = document.createElement('td');
+                    containerCell.className = 'align-middle';
+                    containerCell.textContent = location.container || '-';
+                    tr.appendChild(containerCell);
+                    
+                    // Actions cell
+                    const actionsCell = document.createElement('td');
+                    actionsCell.className = 'text-end';
+                    const deleteBtn = document.createElement('button');
+                    deleteBtn.className = 'btn btn-sm btn-danger';
+                    deleteBtn.textContent = 'Delete';
+                    
+                    if (location.hasOwnProperty('partsCount') && location.partsCount > 0) {
+                        deleteBtn.disabled = true;
+                        deleteBtn.title = 'Cannot delete location with parts';
+                    } else {
+                        deleteBtn.onclick = () => deleteLocation(location.locationName);
+                    }
+                    
+                    actionsCell.appendChild(deleteBtn);
+                    tr.appendChild(actionsCell);
+                    
+                    locationsList.appendChild(tr);
+                });
             } catch (error) {
                 console.error('Error loading locations:', error);
-                locationsList.innerHTML = '<tr><td colspan="3" class="text-center text-danger">Failed to load locations</td></tr>';
+                
+                // Clear and show error
+                while (locationsList.firstChild) {
+                    locationsList.removeChild(locationsList.firstChild);
+                }
+                
+                const tr = document.createElement('tr');
+                const td = document.createElement('td');
+                td.setAttribute('colspan', '3');
+                td.className = 'text-center text-danger';
+                td.textContent = 'Failed to load locations';
+                tr.appendChild(td);
+                locationsList.appendChild(tr);
             }
         }
 

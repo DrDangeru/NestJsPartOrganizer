@@ -5,6 +5,25 @@ document.addEventListener('DOMContentLoaded', function() {
     const showLocationsBtn = document.getElementById('showLocations');
     const partList = document.getElementById('partList');
 
+    // Utility functions
+    function createSafeElement(tag, textContent, attributes = {}) {
+        const element = document.createElement(tag);
+        if (textContent) {
+            element.textContent = textContent;
+        }
+        Object.entries(attributes).forEach(([key, value]) => {
+            if (key.startsWith('on')) return; // Don't allow event handlers
+            element.setAttribute(key, value);
+        });
+        return element;
+    }
+
+    function clearElement(element) {
+        while (element.firstChild) {
+            element.removeChild(element.firstChild);
+        }
+    }
+
     // Function to load and display locations
     async function loadLocations() {
         try {
@@ -14,26 +33,39 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             const locations = await response.json();
             
-            // Clear existing locations
-            if (locationList) {
-                locationList.innerHTML = '';
-                
-                // Add each location to the table
-                locations.forEach(location => {
-                    const row = document.createElement('tr');
-                    row.innerHTML = `
-                        <td>${location.locationName || ''}</td>
-                        <td>${location.locationId || ''}</td>
-                        <td>${location.container || ''}</td>
-                        <td>${location.row || ''}</td>
-                        <td>${location.position || ''}</td>
-                    `;
-                    locationList.appendChild(row);
+            clearElement(locationList);
+            
+            if (locations.length === 0) {
+                const emptyMessage = createSafeElement('div', 'No locations found', {
+                    class: 'alert alert-info'
                 });
+                locationList.appendChild(emptyMessage);
+                return;
             }
+
+            locations.forEach(location => {
+                const row = createSafeElement('tr', null);
+                
+                const nameEl = createSafeElement('td', location.locationName || '');
+                const idEl = createSafeElement('td', location.locationId || '');
+                const containerEl = createSafeElement('td', location.container || '');
+                const rowEl = createSafeElement('td', location.row || '');
+                const positionEl = createSafeElement('td', location.position || '');
+                
+                row.appendChild(nameEl);
+                row.appendChild(idEl);
+                row.appendChild(containerEl);
+                row.appendChild(rowEl);
+                row.appendChild(positionEl);
+                locationList.appendChild(row);
+            });
         } catch (error) {
             console.error('Error loading locations:', error);
-            showAlert('Failed to load locations: ' + error.message, 'danger');
+            clearElement(locationList);
+            const errorMessage = createSafeElement('div', 'Error loading locations', {
+                class: 'alert alert-danger'
+            });
+            locationList.appendChild(errorMessage);
         }
     }
 
@@ -46,27 +78,41 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             const parts = await response.json();
             
-            // Clear existing parts
-            if (partList) {
-                partList.innerHTML = '';
-                
-                // Add each part to the table
-                parts.forEach(part => {
-                    const row = document.createElement('tr');
-                    row.innerHTML = `
-                        <td>${part.partName || ''}</td>
-                        <td>${part.id || ''}</td>
-                        <td>${part.type || ''}</td>
-                        <td>${part.status || ''}</td>
-                        <td>${part.dateAdded || ''}</td>
-                        <td>${part.quantity || ''}</td>
-                    `;
-                    partList.appendChild(row);
+            clearElement(partList);
+            
+            if (parts.length === 0) {
+                const emptyMessage = createSafeElement('div', 'No parts found', {
+                    class: 'alert alert-info'
                 });
+                partList.appendChild(emptyMessage);
+                return;
             }
+
+            parts.forEach(part => {
+                const row = createSafeElement('tr', null);
+                
+                const nameEl = createSafeElement('td', part.partName || '');
+                const idEl = createSafeElement('td', part.id || '');
+                const typeEl = createSafeElement('td', part.type || '');
+                const statusEl = createSafeElement('td', part.status || '');
+                const dateAddedEl = createSafeElement('td', part.dateAdded || '');
+                const quantityEl = createSafeElement('td', part.quantity || '');
+                
+                row.appendChild(nameEl);
+                row.appendChild(idEl);
+                row.appendChild(typeEl);
+                row.appendChild(statusEl);
+                row.appendChild(dateAddedEl);
+                row.appendChild(quantityEl);
+                partList.appendChild(row);
+            });
         } catch (error) {
             console.error('Error loading parts:', error);
-            showAlert('Failed to load parts: ' + error.message, 'danger');
+            clearElement(partList);
+            const errorMessage = createSafeElement('div', 'Error loading parts', {
+                class: 'alert alert-danger'
+            });
+            partList.appendChild(errorMessage);
         }
     }
 
@@ -84,7 +130,7 @@ document.addEventListener('DOMContentLoaded', function() {
             e.preventDefault();
             
             // Clear previous alerts
-            alertArea.innerHTML = '';
+            clearElement(alertArea);
 
             // Get form data
             const locationData = {
@@ -123,9 +169,21 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function showAlert(message, type) {
-        const alertDiv = document.createElement('div');
-        alertDiv.className = `alert alert-${type}`;
-        alertDiv.textContent = message;
-        alertArea.appendChild(alertDiv);
+        const alertArea = document.getElementById('alertArea');
+        clearElement(alertArea);
+        
+        const alert = createSafeElement('div', message, {
+            class: `alert alert-${type} alert-dismissible fade show`,
+            role: 'alert'
+        });
+        
+        const closeButton = createSafeElement('button', '×', {
+            class: 'close',
+            'data-dismiss': 'alert',
+            'aria-label': 'Close'
+        });
+        
+        alert.appendChild(closeButton);
+        alertArea.appendChild(alert);
     }
 });

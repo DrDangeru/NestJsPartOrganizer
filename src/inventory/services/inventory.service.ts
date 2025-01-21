@@ -1,4 +1,5 @@
-import { Injectable, NotFoundException, BadRequestException, InternalServerErrorException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, 
+    InternalServerErrorException } from '@nestjs/common';
 import {
     Part,
     Location,
@@ -25,7 +26,7 @@ export class InventoryService {
             dateAdded: new Date().toISOString(),  // Add current date
         };
 
-        return this.db.createPart(newPart) as any;
+        return this.db.createPart(newPart) as Part;
     }
 
     async createLocation(data: Omit<Location, 'locationId'>): Promise<Location> {
@@ -41,10 +42,18 @@ export class InventoryService {
         }) as unknown as Location;
     }
 
-    async getPart(id: string): Promise<Part> {
-        const part = await this.db.getPart(id);
+    async getPart( partName: string): Promise<Part> {
+        const part = await this.db.getPart(partName);
         if (!part) {
-            throw new NotFoundException(`Part with ID ${id} not found`);
+            throw new NotFoundException(`Part with ID ${partName} not found`);
+        }
+        return part as Part;
+    }
+
+    async getPartById(partId: number): Promise<Part> {
+        const part = await this.db.getPartById(partId);
+        if (!part) {
+            throw new NotFoundException(`Part with ID ${partId} not found`);
         }
         return part as Part;
     }
@@ -63,9 +72,9 @@ export class InventoryService {
         return this.db.updatePart(id, { ...part, ...data }) as Part;
     }
 
-    async deletePart(id: string): Promise<void> {
-        await this.getPart(id); // Check if exists
-        await this.db.deletePart(id);
+    async deletePart(partId: number): Promise<void> { // used name but did not work...
+        await this.getPartById(partId); // Check if exists
+        await this.db.deletePartById(partId); // Delete it(partId), prev used name
     }
 
     async findPartsByLocation(locationId: string): Promise<Part[]> {

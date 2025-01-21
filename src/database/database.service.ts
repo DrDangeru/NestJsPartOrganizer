@@ -144,6 +144,24 @@ export class DatabaseService implements OnModuleInit {
         }
     }
 
+    getPartById(partId: number ) {
+        try {
+            const part = this.prepare(`
+                SELECT partId, partName, partDescription, type, status, dateAdded,
+                       currentLoan, quantity, manufacturer, model,
+                       locationId, container, row, position, category
+                FROM parts 
+                WHERE partId = ?`).get(partId);
+            if (!part) {
+                throw new Error(`Part with name ${partId} not found`);
+            }
+            return part;
+        } catch (error) {
+            console.error(`Error getting part ${partId}:`, error);
+            throw error;
+        }
+    }
+
     createPart(part: Part) {
         try {
             const partId = part.partId || this.generateId('part');
@@ -263,6 +281,19 @@ export class DatabaseService implements OnModuleInit {
             throw error;
         }
     }
+
+    deletePartById(partId: number) {
+    try {
+        const result = this.prepare('DELETE FROM parts WHERE partId = ?').run(partId);
+        if (result.changes === 0) {
+            throw new Error(`Part with name ${partId} not found`);
+        }
+        return result;
+    } catch (error) {
+        console.error('Error deleting part:', error);
+        throw error;
+    }
+}
 
     showLocations() {
         return this.prepare('SELECT * FROM locations').all();

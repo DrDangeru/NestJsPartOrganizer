@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Parts List</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .filter-section {
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .parts-table {
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        .search-box {
+            margin-bottom: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-4">
+        <h2 class="mb-4">Parts Inventory</h2>
+        
+        <div class="filter-section">
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="search-box">
+                        <label for="searchInput" class="form-label">Search Parts</label>
+                        <input type="text" class="form-control" id="searchInput" placeholder="Search by part name...">
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <label for="statusFilter" class="form-label">Status</label>
+                    <select class="form-select" id="statusFilter">
+                        <option value="">All Status</option>
+                        <option value="available">Available</option>
+                        <option value="loaned">Loaned</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label for="typeFilter" class="form-label">Type</label>
+                    <select class="form-select" id="typeFilter">
+                        <option value="">All Types</option>
+                    </select>
+                </div>
+                <div class="col-md-2 d-flex align-items-end">
+                    <button class="btn btn-primary w-100" onclick="resetFilters()">Reset Filters</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table table-striped table-hover parts-table">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Part Name</th>
+                        <th>Type</th>
+                        <th>Status</th>
+                        <th>Quantity</th>
+                        <th>Location</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="partsTableBody">
+                    <!-- Parts will be dynamically inserted here -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        let partsData = [];
+        let uniqueTypes = new Set();
+
+        // Fetch and display parts on page load
+        document.addEventListener('DOMContentLoaded', async () => {
+            await fetchParts();
+            populateTypeFilter();
+            setupEventListeners();
+        });
+
+        async function fetchParts() {
+            try {
+                const response = await fetch('/api/inventory/parts');
+                partsData = await response.json();
+                partsData.forEach(part => uniqueTypes.add(part.type));
+                displayParts(partsData);
+            } catch (error) {
+                console.error('Error fetching parts:', error);
+            }
+        }
+
+        function populateTypeFilter() {
+            const typeFilter = document.getElementById('typeFilter');
+            uniqueTypes.forEach(type => {
+                const option = document.createElement('option');
+                option.value = type;
+                option.textContent = type;
+                typeFilter.appendChild(option);
+            });
+        }
+
+        function setupEventListeners() {
+            // Search input listener
+            document.getElementById('searchInput').addEventListener('input', filterParts);
+            
+            // Status filter listener
+            document.getElementById('statusFilter').addEventListener('change', filterParts);
+            
+            // Type filter listener
+            document.getElementById('typeFilter').addEventListener('change', filterParts);
+        }
+
+        function filterParts() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            const statusFilter = document.getElementById('statusFilter').value;
+            const typeFilter = document.getElementById('typeFilter').value;
+
+            const filteredParts = partsData.filter(part => {
+                const matchesSearch = part.partName.toLowerCase().includes(searchTerm);
+                const matchesStatus = !statusFilter || part.status === statusFilter;
+                const matchesType = !typeFilter || part.type === typeFilter;
+                return matchesSearch && matchesStatus && matchesType;
+            });
+
+            displayParts(filteredParts);
+        }
+
+        function displayParts(parts) {
+            const tbody = document.getElementById('partsTableBody');
+            tbody.innerHTML = '';
+
+            parts.forEach(part => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${part.partName}</td>
+                    <td>${part.type}</td>
+                    <td><span class="badge ${part.status === 'available' ? 'bg-success' : 'bg-warning'}">${part.status}</span></td>
+                    <td>${part.quantity}</td>
+                    <td>${part.location || 'N/A'}</td>
+                    <td>
+                        <button class="btn btn-sm btn-info" onclick="viewPart(${part.partId})">View</button>
+                        <button class="btn btn-sm btn-danger" onclick="deletePart(${part.partId})">Delete</button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        function resetFilters() {
+            document.getElementById('searchInput').value = '';
+            document.getElementById('statusFilter').value = '';
+            document.getElementById('typeFilter').value = '';
+            filterParts();
+        }
+
+        async function viewPart(partId) {
+            try {
+                const response = await fetch(`/api/inventory/parts/${partId}`);
+                const part = await response.json();
+                // You can implement a modal or redirect to a detail view
+                console.log('Part details:', part);
+            } catch (error) {
+                console.error('Error fetching part details:', error);
+            }
+        }
+
+        async function deletePart(partId) {
+            if (!confirm('Are you sure you want to delete this part?')) return;
+            
+            try {
+                const response = await fetch(`/api/inventory/parts/${partId}`, {
+                    method: 'DELETE'
+                });
+                if (response.ok) {
+                    await fetchParts(); // Refresh the list
+                } else {
+                    throw new Error('Failed to delete part');
+                }
+            } catch (error) {
+                console.error('Error deleting part:', error);
+                alert('Failed to delete part');
+            }
+        }
+    </script>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

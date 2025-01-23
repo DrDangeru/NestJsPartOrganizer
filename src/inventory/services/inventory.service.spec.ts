@@ -1,15 +1,15 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { InventoryService } from './inventory.service';
-import { Part, PartStatus, Location } from '../types/inventory.types';
+import { Part, PartStatus } from '../types/inventory.types';
 import { DatabaseService } from '../../database/database.service';
 import { NotFoundException } from '@nestjs/common';
 
-describe('InventoryService', () => {
+describe('InventoryService - Part Management', () => {
   let service: InventoryService;
   let dbService: DatabaseService;
 
   beforeEach(async () => {
-    // Create a type-safe mock of DatabaseService
+    // Create a type-safe mock of DatabaseService with only part-related methods
     const mockDb = {
       createPart: jest.fn(),
       getPartById: jest.fn(),
@@ -21,8 +21,6 @@ describe('InventoryService', () => {
       findPartsByStatus: jest.fn(),
       deletePart: jest.fn(),
       deletePartById: jest.fn(),
-      showLocations: jest.fn(),
-      createLocation: jest.fn(),
       onModuleInit: jest.fn()
     } as unknown as DatabaseService;
 
@@ -117,4 +115,12 @@ describe('InventoryService', () => {
         .toThrow(NotFoundException);
     });
   });
+
+  // TODO: Add tests for other part management methods:
+  // - updatePart
+  // - deletePart
+  // - findPartsByType
+  // - findPartsByLocation
+  // - findPartsByStatus
+  // - getAllParts
 });

@@ -29,19 +29,6 @@ export class InventoryService {
         return this.db.createPart(newPart) as Part;
     }
 
-    async createLocation(data: Omit<Location, 'locationId'>): Promise<Location> {
-        if (!data.locationName) {
-            throw new BadRequestException('Location name required');
-        }
-
-        return this.db.createLocation({
-            locationName: data.locationName,
-            container: data.container,
-            row: data.row,
-            position: data.position
-        }) as unknown as Location;
-    }
-
     async getPart( partName: string): Promise<Part> {
         const part = await this.db.getPart(partName);
         if (!part) {
@@ -101,6 +88,19 @@ export class InventoryService {
         return this.db.showLocations() as Location[];
     }
 
+    // Location Management
+    async createLocation(data: Omit<Location, 'locationId'>): Promise<Location> {
+        if (!data.locationName) {
+            throw new BadRequestException('Location name required');
+        }
+
+        return this.db.createLocation({
+            locationName: data.locationName,
+            container: data.container,
+            row: data.row,
+            position: data.position
+        }) as unknown as Location;
+    }
     async getLocationByName(name: string): Promise<Location> {
         const location = this.db.prepare(
             'SELECT * FROM locations WHERE locationName = ?'
@@ -124,7 +124,8 @@ export class InventoryService {
         const parts = await this.db.findPartsByLocation(name);
         if (parts && parts.length > 0) {
             throw new BadRequestException(
-                `Cannot delete location "${name}" because it contains ${parts.length} parts. Please move or delete these parts first.`
+                `Cannot delete location "${name}" because it contains
+                 ${parts.length} parts. Please move or delete these parts first.`
             );
         }
 

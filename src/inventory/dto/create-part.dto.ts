@@ -5,6 +5,9 @@ export class CreatePartDto implements Omit<Part, 'dateAdded'> {
     @IsString()
     @IsNotEmpty()
     type!: Part['type']
+    
+    @IsString()
+    @IsNotEmpty()
     partName: string;
 
     @IsString()
